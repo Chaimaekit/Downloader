@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>YouTube Audio Downloader</title>
+  <link rel="stylesheet" href="static/style.css" />
+</head>
+<body>
+  <div class="background-shapes">
+    <div class="shape shape1"></div>
+    <div class="shape shape2"></div>
+  </div>
+
+  <div class="container">
+    <h1>YouTube Audio Downloader</h1>
+
+    <div class="mode-select">
+      <label for="modeSelect">Choose Mode:</label>
+      <select id="modeSelect">
+        <option value="search" selected>Search</option>
+        <option value="playlist">Download Playlist URL</option>
+      </select>
+    </div>
+
+    <form id="searchForm">
+      <input type="text" id="searchInput" placeholder="Enter song or video name" required />
+      <button type="submit">Search</button>
+    </form>
+
+    <form id="playlistForm" style="display:none;">
+      <input type="url" id="playlistInput" placeholder="Paste YouTube Playlist URL" required />
+      <button type="submit" id="playlistBtn">Download</button>
+    </form>
+
+    <div class="results" id="results"></div>
+  </div>
+
+  <script>
+    const modeSelect = document.getElementById('modeSelect');
+    const searchForm = document.getElementById('searchForm');
+    const playlistForm = document.getElementById('playlistForm');
+
+    modeSelect.addEventListener('change', () => {
+      const mode = modeSelect.value;
+      if (mode === 'search') {
+        searchForm.style.display = 'flex';
+        playlistForm.style.display = 'none';
+      } else {
+        searchForm.style.display = 'none';
+        playlistForm.style.display = 'flex';
+      }
+    });
+
+    async function search(event) {
+      event.preventDefault();
+      const songName = document.getElementById('searchInput').value;
+      const numResults = 5;
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = 'Loading...';
+
+      try {
+        const response = await fetch(`/search?song_name=${encodeURIComponent(songName)}&num_results=${numResults}`);
+        const videos = await response.json();
+        if (videos.length === 0) {
+          resultsDiv.innerHTML = 'No results found.';
+        } else {
+          resultsDiv.innerHTML = videos.map(video => `
+            <div class="video">
+              <div class="video-title">${video.title}</div>
+              <a href="${video.url}" target="_blank">Watch</a>
+              <button onclick="download('${video.url}')">Download MP3</button>
+            </div>
+          `).join('');
+        }
+      } catch (error) {
+        resultsDiv.innerHTML = 'Error fetching results.';
+        console.error(error);
+      }
+    }
+
+    function download(url) {
+      window.open(`/download?video_url=${encodeURIComponent(url)}`);
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', search);
+
+    document.getElementById('playlistForm').addEventListener('submit', async (evt) => {
+      evt.preventDefault();
+      const url = document.getElementById('playlistInput').value.trim();
+      if (!url) return;
+
+      const btn = document.getElementById('playlistBtn');
+      btn.disabled = true;
+      btn.textContent = 'Downloading…';
+
+      try {
+        const resp = await fetch(`/download_playlist?playlist_url=${encodeURIComponent(url)}`);
+        if (!resp.ok) throw new Error(await resp.text());
+        const data = await resp.json();
+        alert(data.message || 'Playlist downloaded!');
+      } catch (err) {
+        alert('Download failed: ' + err.message);
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Download';
+      }
+    });
+  </script>
+</body>
+</html>
