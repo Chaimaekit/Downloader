@@ -18,3 +18,6 @@ Install Python dependencies:
 
 ```bash
 pip install -r requirements.txt
+
+Inside the venv using:
+py -m venv venv -> source ./venv/Scripts/activate -> then pip install -r requirements.txt
